@@ -6,6 +6,8 @@ import plotly.express as px
 import json
 import os
 from dash import callback_context
+from dash.exceptions import PreventUpdate
+from district_page import app as district_app
 
 # Load data
 with open('C:/ground1/karnataka.json', 'r') as f:
@@ -14,7 +16,7 @@ df = pd.read_csv('C:/ground1/water_data5.csv')
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, assets_folder=os.path.join(os.getcwd(), 'assets'), external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, suppress_callback_exceptions=True, assets_folder=os.path.join(os.getcwd(), 'assets'), external_stylesheets=external_stylesheets)
 
 # Define color options for the dropdown
 color_options = ['cl', 'k', 'ph_gen', 'Level (m)']
@@ -39,6 +41,8 @@ app.layout = html.Div([
 def display_page(pathname):
     if pathname == '/app':
         return main_app_layout
+    elif pathname == '/district_page':
+        return district_app.layout
     else:
         return start_page_layout
 
@@ -70,6 +74,7 @@ main_app_layout = html.Div([
 @app.callback(
     Output('url', 'pathname'),
     [Input('get-started-button', 'n_clicks')]
+    
 )
 def redirect_to_app(n_clicks):
     if n_clicks > 0:
@@ -109,6 +114,22 @@ def update_visualizations(selected_year, selected_color):
     fig_scatter.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
     return fig_choropleth, fig_scatter
+
+@app.callback(
+    Output('url', 'pathname',allow_duplicate=True),
+    [Input('choropleth', 'clickData')],
+    prevent_initial_call='initial_duplicate'  # Set prevent_initial_call
+)
+
+def redirect_on_map_click(clickData):
+    if clickData is None:
+        raise PreventUpdate
+
+    # Perform any logic here based on the clicked district
+    # You can redirect to a specific app based on the clicked district
+
+    # For example, redirect to '/district-app'
+    return '/district_page'
 
 
 @app.callback(
