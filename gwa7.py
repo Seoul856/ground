@@ -5,18 +5,45 @@ import pandas as pd
 import plotly.express as px
 import json
 import os
+from dash import callback_context
 
 # Load data
 with open('C:/ground1/karnataka.json', 'r') as f:
     geojson = json.load(f)
 df = pd.read_csv('C:/ground1/water_data5.csv')
 
-app = dash.Dash(__name__, assets_folder=os.path.join(os.getcwd(), 'assets'))
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+app = dash.Dash(__name__, assets_folder=os.path.join(os.getcwd(), 'assets'), external_stylesheets=external_stylesheets)
 
 # Define color options for the dropdown
 color_options = ['cl', 'k', 'ph_gen', 'Level (m)']
 
+# Define the starting page layout
+start_page_layout = html.Div([
+    html.H1("Welcome to Groundwater Analysis", style={'textAlign': 'center', 'color': 'blue'}),
+    html.Button('Get Started', id='get-started-button', n_clicks=0, style={'margin': '20px'})
+])
+
+# Define the main app layout
 app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# Callback to switch between starting page and main app layout
+@app.callback(
+    Output('page-content', 'children'),
+    [Input('url', 'pathname')]
+)
+def display_page(pathname):
+    if pathname == '/app':
+        return main_app_layout
+    else:
+        return start_page_layout
+
+# Main app layout
+main_app_layout = html.Div([
     html.H1("Groundwater Analysis", style={'textAlign': 'center', 'color': 'blue'}),
     dcc.Dropdown(
         id='color-dropdown',
@@ -39,6 +66,18 @@ app.layout = html.Div([
     dcc.Markdown(id='click-data', children="Click on a point in the scatter plot to see more details.", style={'color': 'red'})
 ])
 
+# Callback to handle button click and redirect to main app layout
+@app.callback(
+    Output('url', 'pathname'),
+    [Input('get-started-button', 'n_clicks')]
+)
+def redirect_to_app(n_clicks):
+    if n_clicks > 0:
+        return '/app'
+    else:
+        return '/'
+
+# Callbacks for the main app layout (similar to your existing callbacks)
 @app.callback(
     [Output('choropleth', 'figure'),
      Output('scatter_geo', 'figure')],
@@ -71,6 +110,7 @@ def update_visualizations(selected_year, selected_color):
 
     return fig_choropleth, fig_scatter
 
+
 @app.callback(
     Output('click-data', 'children'),
     [Input('scatter_geo', 'clickData'),
@@ -92,7 +132,7 @@ def display_click_data(clickData, selected_year):
             [f"{property_name}: {point_data[property_name]}" if pd.notna(point_data[property_name]) else f"{property_name}: N/A"
              for property_name in ['Station Name', 'Agency Name', 'District', selected_color]]
         )
-        return hover_data_message
+        return hover_data_message# Your existing callback logic here...
 
 if __name__ == '__main__':
     app.run_server(debug=True)
